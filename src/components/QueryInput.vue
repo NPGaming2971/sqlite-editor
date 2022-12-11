@@ -1,6 +1,6 @@
 <script lang="ts">
 import { useMainStore } from '@/stores/main';
-import { mapState } from 'pinia';
+import { mapState, MutationType } from 'pinia';
 import { defineComponent } from 'vue';
 export default defineComponent({
 	name: 'QueryInput',
@@ -13,15 +13,15 @@ export default defineComponent({
 			this.store.exec();
 		},
 		onQueryUpdate(i: Event) {
-			console.log(i)
 			const elem = i.target as HTMLInputElement;
-			this.store.queryString = elem.value;
-			console.log(elem.value);
+			this.store.$patch({ queryString: elem.value });
 		}
 	},
 
 	mounted() {
 		this.store.$subscribe((_, state) => {
+			if (_.type === MutationType.patchObject && _.payload.queryString)
+				(this.$refs.text as HTMLTextAreaElement).value = state.queryString;
 		});
 	},
 

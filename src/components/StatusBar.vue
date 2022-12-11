@@ -1,6 +1,6 @@
 <script lang="ts">
 import { useMainStore } from '@/stores/main';
-import { mapWritableState } from 'pinia';
+import { mapWritableState, MutationType, type SubscriptionCallback, type SubscriptionCallbackMutation } from 'pinia';
 import { defineComponent } from 'vue';
 import CheckIcon from '@/components/icons/Check.vue';
 import CrossIcon from '@/components/icons/Cross.vue';
@@ -17,8 +17,10 @@ export default defineComponent({
 		return { store };
 	},
 	mounted() {
-		this.store.$subscribe((_, state) => {
-			this.update(state.status);
+		this.store.$subscribe((_) => {
+			if (_.type === MutationType.patchObject) {
+				if (_.payload.status) this.update(_.payload.status);
+			}
 		});
 	},
 	name: 'TableRow',

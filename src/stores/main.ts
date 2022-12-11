@@ -42,7 +42,7 @@ export const useMainStore = defineStore('main', {
 		},
 
 		setStatus(n: number) {
-			this.status = n;
+			this.$patch({ status: n })
 		}
 	}
 });
