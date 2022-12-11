@@ -7,6 +7,8 @@ export default defineComponent({
 	methods: {
 		onCellClick(i: MouseEvent) {
 			if (!(i.target instanceof HTMLTableCellElement)) return;
+			if (i.target.tagName !== 'TD') return;
+			
 			this.$emit('dataaccess', i.target.textContent, [i.target.closest('tr')!.rowIndex, (i as any).cellIndex]);
 			console.log(i.target.textContent, i.target.closest('tr')!.rowIndex, i.target.cellIndex);
 		}

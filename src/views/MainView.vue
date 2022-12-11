@@ -11,11 +11,12 @@ export default defineComponent({
 	}),
 	methods: {
 		closePopup: function () {
-			((this.$refs.editor as any).$el as HTMLElement).style.display = 'none';
+			((this.$refs.editor as any).$el as HTMLElement).style.height = '0%';
 		},
 		openPopup: function (i: string) {
 			this.text = i;
-			((this.$refs.editor as any).$el as HTMLElement).style.display = 'initial';
+			const el = document.querySelector('.editor-container')! as HTMLDivElement;
+			el.style.height = '40%';
 		}
 	},
 	components: { StatusBar, QueryInputVue, TableViewVue, CellEditorVue }
@@ -24,8 +25,8 @@ export default defineComponent({
 <template>
 	<QueryInputVue></QueryInputVue>
 	<TableViewVue @dataaccess="(i) => openPopup(i)"></TableViewVue>
-	<StatusBar></StatusBar>
 	<CellEditorVue ref="editor" :text="text" :hidden="true" @popupclose="closePopup"></CellEditorVue>
+	<StatusBar></StatusBar>
 </template>
 <style></style>
 
