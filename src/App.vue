@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router';
 import { useMainStore } from './stores/main';
+import MainViewVue from './views/MainView.vue';
 
 const store = useMainStore();
 store.setup();
 </script>
 
 <template>
-	<header>
-		<RouterLink to="/">Home</RouterLink>
-	</header>
-
-	<RouterView />
+	<MainViewVue></MainViewVue>
 </template>
 
 <style scoped></style>
