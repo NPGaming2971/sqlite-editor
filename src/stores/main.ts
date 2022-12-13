@@ -12,14 +12,20 @@ export const useMainStore = defineStore('main', {
 		database: null as Database,
 		tables: [] as string[],
 		status: 0,
-		data: [] as object[]
+		data: [] as object[],
+		session: {
+			location: [] as number[],
+			content: ''
+		}
 	}),
 	getters: {},
 	actions: {
 		async setup() {
 			try {
 				const buffer = await fetch(
-					'https://cdn.discordapp.com/attachments/856125690726580224/1038305734263308328/data.sqlite'
+					'https://cdn.discordapp.com/attachments/811037489430528041/1051849371450343444/data.sqlite',
+					{
+					}
 				).then((i) => i.arrayBuffer());
 				this.database = new SQL.Database(new Uint8Array(buffer));
 				this.$patch({ tables: extractTables(this.database), status: 2 });
@@ -35,14 +41,14 @@ export const useMainStore = defineStore('main', {
 				this.setStatus(2);
 				const formatted = formatDatabaseQueryResult(data[0]);
 				this.data = formatted;
-				return formatted
+				return formatted;
 			} catch {
 				this.setStatus(1);
 			}
 		},
 
 		setStatus(n: number) {
-			this.$patch({ status: n })
+			this.$patch({ status: n });
 		}
 	}
 });

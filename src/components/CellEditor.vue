@@ -1,74 +1,72 @@
 <script lang="ts">
 import { isJsonLike } from '@/utils';
-import { defineComponent, type PropType } from 'vue';
-import { highlight, languages } from 'prismjs';
-import 'prismjs/themes/prism.css';
+import { defineComponent } from 'vue';
+import { mapWritableState } from 'pinia';
+import { useMainStore } from '@/stores/main';
 
 export default defineComponent({
 	name: 'FieldEditor',
-	emits: ['popupclose'],
-	data() {
-		return { content: '' };
-	},
-	props: {
-		text: {
-			type: String,
-			default: ''
-		},
-		position: {
-			type: Array as unknown as PropType<[number, number]>,
-			default: []
-		},
-		tableName: {
-			type: String
-		}
-	},
 	methods: {
 		onClose: function () {
-			this.$emit('popupclose');
+			const el = this.$refs.editor as HTMLDivElement;
+
+			el.style.height = '0%';
 		},
 		format(t: string) {
 			const formatted = JSON.stringify(JSON.parse(t), null, 4);
-			this.content = formatted;
+			this.session.content = formatted;
 		},
 		isJsonLike,
 		onDatabaseUpdate(param: string) {
-			this.content = param;
-			console.log(this.content);
+			this.session.content = param;
+			console.log(this.session.content);
 		},
 		retrieveColumnName(column: number) {
 			return document.querySelectorAll('div.tableview table th').item(column).textContent!;
-		},
-		highlight(i: string) {
-			return highlight(i, languages.javascript, 'javascript');
 		}
 	},
-	watch: {
-		text(val) {
-			this.content = val;
-		}
+
+	computed: {
+		...mapWritableState(useMainStore, ['session'])
 	}
 });
 </script>
 
 <template>
-	<div class="editor-container" ref="editor">
-		<div @click="onClose">[x]</div>
-		{{ text }}
+	<div class="editor-container opened" ref="editor">
+		<div>
+			<button @click="onDatabaseUpdate(session.content)">Lưu</button>
+			<button :disabled="!isJsonLike(session.content)" @click="format(session.content)">Format</button>
+			<button @click="onClose">Đóng</button>
+		</div>
+		<codemirror :style="{ height: '100%' }" v-model="session.content" />
 	</div>
 </template>
 
 <style scoped>
-div.editor-container > div {
+div.editor-container > div:first-of-type {
+	background-color: #555555;
+	text-align: left;
+	padding: 3px;
+}
+
+div.editor-container > div:first-of-type > *:not(button:last-of-type) {
+	margin-right: 3px;
+}
+
+button:disabled {
 	background-color: #555555;
 }
+
 div.editor-container {
 	position: fixed;
 	width: 100%;
-    display: initial;
-	text-align: center;
+	display: initial;
+	height: 50%;
 	bottom: 0px;
+	height: 0px;
 	background-color: grey;
 	transition: 0.09s ease-out;
+	z-index: 0;
 }
 </style>

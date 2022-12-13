@@ -4,13 +4,25 @@ import { mapState } from 'pinia';
 import { defineComponent } from 'vue';
 export default defineComponent({
 	name: 'TableView',
+	setup() {
+		const store = useMainStore();
+
+		return { store };
+	},
 	methods: {
 		onCellClick(i: MouseEvent) {
 			if (!(i.target instanceof HTMLTableCellElement)) return;
 			if (i.target.tagName !== 'TD') return;
-			
-			this.$emit('dataaccess', i.target.textContent, [i.target.closest('tr')!.rowIndex, (i as any).cellIndex]);
-			console.log(i.target.textContent, i.target.closest('tr')!.rowIndex, i.target.cellIndex);
+
+			const el = document.querySelector('.editor-container')! as HTMLDivElement
+			el.style.height = '40%'
+
+			this.store.$patch({
+				session: {
+					location: [i.target.closest('tr')!.rowIndex, i.target.cellIndex],
+					content: i.target.textContent!
+				}
+			});
 		}
 	},
 	computed: {

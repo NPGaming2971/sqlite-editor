@@ -9,6 +9,3 @@ store.setup();
 <template>
 	<MainViewVue></MainViewVue>
 </template>
-
-<style scoped></style>
-

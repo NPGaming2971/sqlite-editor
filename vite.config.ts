@@ -11,8 +11,12 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  esbuild: {
+    
+  },
   build: {
     target: "chrome89",
+    
   },
   base: "./",
 });
