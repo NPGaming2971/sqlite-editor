@@ -15,7 +15,7 @@ export default defineComponent({
 			if (i.target.tagName !== 'TD') return;
 
 			const el = document.querySelector('.editor-container')! as HTMLDivElement
-			el.style.height = '40%'
+			el.style.height = '100%'
 
 			this.store.$patch({
 				session: {

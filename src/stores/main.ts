@@ -37,10 +37,15 @@ export const useMainStore = defineStore('main', {
 		exec(sql?: string) {
 			if (!this.database) throw new Error('Database unavailable.');
 			try {
-				const data = this.database.exec(sql ?? this.queryString);
+				let query = sql ?? this.queryString
+				const data = this.database.exec(query);
 				this.setStatus(2);
+
 				const formatted = formatDatabaseQueryResult(data[0]);
 				this.data = formatted;
+
+				localStorage.setItem('last_query', query)
+
 				return formatted;
 			} catch {
 				this.setStatus(1);
