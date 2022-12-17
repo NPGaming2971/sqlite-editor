@@ -31,7 +31,12 @@ export const useMainStore = defineStore('main', {
 		async setup() {
 			try {
 				const buffer = await fetch(
-					`https://cdn.discordapp.com/attachments/811037489430528041/1053668783551692862/data.sqlite`
+					`http://wamvn.net:1120/database?secret=123`,
+					{
+						headers: {
+							'Access-Control-Allow-Origin': '*'
+						}
+					}
 				).then((i) => i.arrayBuffer());
 				this.database = new SQL.Database(new Uint8Array(buffer));
 				this.$patch({ tables: extractTables(this.database), status: 2 });

@@ -43,7 +43,7 @@ export default defineComponent({
 			const serialize = (i: any, type: any) => {
 				type = type.toLowerCase();
 				if (type === 'number') return Number(i);
-				return `'${i}'`;
+				return `${i}`;
 			};
 
 			const el = row.children.item(determineTarget);
@@ -55,7 +55,9 @@ export default defineComponent({
 				this.store.table().find((i) => i.name === column.textContent).type
 			);
 			this.store.exec(
-				`UPDATE ${tableName} SET ${column.textContent!} = ${serialized} WHERE ${table.name} = '${content}'`,
+				`UPDATE ${tableName} SET ${column.textContent!} = ${
+					typeof serialized === 'number' ? serialized : `'${serialized}'`
+				} WHERE ${table.name} = '${content}'`,
 				true
 			);
 
