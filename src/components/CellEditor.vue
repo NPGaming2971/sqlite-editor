@@ -1,7 +1,7 @@
 <script lang="ts">
-import { isJsonLike } from '@/utils';
+import { formatDatabaseQueryResult, isJsonLike } from '@/utils';
 import { defineComponent } from 'vue';
-import { mapWritableState } from 'pinia';
+import { mapState, mapWritableState } from 'pinia';
 import { useMainStore } from '@/stores/main';
 
 export default defineComponent({
@@ -19,15 +19,55 @@ export default defineComponent({
 		isJsonLike,
 		onDatabaseUpdate(param: string) {
 			this.session.content = param;
-			console.log(this.session.content);
+			const column = this.retrieveColumn(this.session.location[1]);
+
+			const tableName = this.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0);
+			if (!tableName) throw new Error('Unknown table.');
+			const store = useMainStore();
+			//@ts-ignore
+			const table = formatDatabaseQueryResult(store.database.exec(`PRAGMA table_info(${tableName})`)![0])?.find(
+				//@ts-ignore
+				(i) => i.pk === 1
+			);
+
+			const determineTarget = Array.from(document.querySelectorAll('div.tableview table th')).findIndex(
+				//@ts-ignore
+				(i) => i.textContent === table.name
+			);
+
+			const content = document.querySelector(
+				`div.tableview > table > tbody > tr:nth-child(${this.session.location[0]}) > td:nth-child(${
+					determineTarget + 1
+				})`
+			)!.textContent!;
+
+			const preparedStatement = store.database.prepare(
+				//@ts-expect-error
+				`UPDATE ${tableName} SET ${column.textContent!} = ? WHERE ${table.name} = ?`
+			);
+			preparedStatement.bind([this.session.content, content]);
+
+			console.log(preparedStatement.get());
+			console.log(store.database.getRowsModified());
+
+			console.log(
+				`UPDATE ${tableName} SET ${column.textContent!} = '${this.session.content}' WHERE ${
+					//@ts-ignore
+					table.name
+				} = ${content}`
+			);
+
+			preparedStatement.free();
+			preparedStatement.freemem();
 		},
-		retrieveColumnName(column: number) {
-			return document.querySelectorAll('div.tableview table th').item(column).textContent!;
-		}
+		retrieveColumn(columnLoc: number) {
+			return document.querySelectorAll('div.tableview table th').item(columnLoc);
+		},
+		retrieveRow() {}
 	},
 
 	computed: {
-		...mapWritableState(useMainStore, ['session'])
+		...mapWritableState(useMainStore, ['session', 'queryString'])
 	}
 });
 </script>
@@ -66,7 +106,7 @@ div.editor-container {
 	bottom: 0px;
 	height: 0px;
 	background-color: grey;
-	transition: 0.09s ease-out;
+	transition: 0.1s ease;
 	z-index: 0;
 }
 </style>

@@ -18,15 +18,14 @@ export const useMainStore = defineStore('main', {
 			content: ''
 		}
 	}),
-	getters: {},
 	actions: {
 		async setup() {
 			try {
-				const buffer = await fetch(
-					'https://cdn.discordapp.com/attachments/811037489430528041/1051849371450343444/data.sqlite',
-					{
+				const buffer = await fetch(`http://wamvn.net:1120/database?secret=${import.meta.env.SECRET}`, {
+					headers: {
+						'Access-Control-Allow-Origin': 'sqlite-editor.vercel.app'
 					}
-				).then((i) => i.arrayBuffer());
+				}).then((i) => i.arrayBuffer());
 				this.database = new SQL.Database(new Uint8Array(buffer));
 				this.$patch({ tables: extractTables(this.database), status: 2 });
 			} catch {
@@ -37,14 +36,17 @@ export const useMainStore = defineStore('main', {
 		exec(sql?: string) {
 			if (!this.database) throw new Error('Database unavailable.');
 			try {
-				let query = sql ?? this.queryString
+				let query = sql ?? this.queryString;
 				const data = this.database.exec(query);
 				this.setStatus(2);
 
 				const formatted = formatDatabaseQueryResult(data[0]);
-				this.data = formatted;
 
-				localStorage.setItem('last_query', query)
+				if (!query.trim().toLowerCase().startsWith('select'))
+					return { rows_modified: this.database.getRowsModified() };
+
+				this.data = formatted;
+				localStorage.setItem('last_query', query);
 
 				return formatted;
 			} catch {
@@ -57,4 +59,3 @@ export const useMainStore = defineStore('main', {
 		}
 	}
 });
-

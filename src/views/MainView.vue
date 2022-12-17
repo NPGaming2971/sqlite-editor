@@ -19,8 +19,8 @@ export default defineComponent({
 <template>
 	<QueryInputVue></QueryInputVue>
 	<TableViewVue></TableViewVue>
-	<CellEditorVue :hidden="true"></CellEditorVue>
 	<StatusBar></StatusBar>
+	<CellEditorVue :hidden="true"></CellEditorVue>
 </template>
 <style></style>
 

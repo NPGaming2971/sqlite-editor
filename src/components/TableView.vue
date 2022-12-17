@@ -19,10 +19,13 @@ export default defineComponent({
 
 			this.store.$patch({
 				session: {
-					location: [i.target.closest('tr')!.rowIndex, i.target.cellIndex],
+					//@ts-ignore
+					location: [i.target.parentNode!.rowIndex, i.target.cellIndex],
 					content: i.target.textContent!
 				}
 			});
+
+			console.log(this.store.session.location)
 		}
 	},
 	computed: {
