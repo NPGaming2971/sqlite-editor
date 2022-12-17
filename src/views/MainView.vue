@@ -3,21 +3,24 @@ import CellEditorVue from '@/components/CellEditor.vue';
 import QueryInputVue from '@/components/QueryInput.vue';
 import StatusBar from '@/components/StatusBar.vue';
 import TableViewVue from '@/components/TableView.vue';
+import ViewPagination from '@/components/ViewPagination.vue';
 import { useMainStore } from '@/stores/main';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-	components: { StatusBar, QueryInputVue, TableViewVue, CellEditorVue },
-	mounted() {
+	components: { StatusBar, QueryInputVue, TableViewVue, CellEditorVue, ViewPagination },
+	setup() {
 		const main = useMainStore();
 		const lastQuery = localStorage.getItem('last_query');
 
 		if (lastQuery) main.$patch({ queryString: lastQuery });
+		return { session: main.session }
 	}
 });
 </script>
 <template>
 	<QueryInputVue></QueryInputVue>
+	<ViewPagination v-if="session.data.length > 1"></ViewPagination>
 	<TableViewVue></TableViewVue>
 	<StatusBar></StatusBar>
 	<CellEditorVue :hidden="true"></CellEditorVue>

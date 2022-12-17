@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import initSqlJs, { type Database } from 'sql.js';
 import { extractTables, formatDatabaseQueryResult } from '@/utils';
+import chunk from 'lodash.chunk';
 const SQL = await initSqlJs({
 	locateFile: (url) => `https://sql.js.org/dist/${url}`
 });
@@ -12,14 +13,16 @@ export const useMainStore = defineStore('main', {
 		database: null as Database,
 		tables: [] as string[],
 		status: 0,
-		data: [] as any[],
 		session: {
 			location: [] as number[],
-			content: ''
+			content: '',
+			data: [] as any[],
+			index: 0
 		}
 	}),
 	getters: {
-		tableName: (i) => i.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0)
+		tableName: (i) => i.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0),
+		data: (i) => i.session.data.at(i.session.index) ?? []
 	},
 	actions: {
 		table(): any {
@@ -47,13 +50,19 @@ export const useMainStore = defineStore('main', {
 
 				if (!dry) {
 					this.setStatus(2);
-					this.data = formatted;
+					this.$patch({
+						session: {
+							data: chunk(formatted, 50) as any,
+							index: 0
+						}
+					});
+
 					localStorage.setItem('last_query', query);
 				}
 
 				return formatted;
-			} catch(err) {
-				console.log(err)
+			} catch (err) {
+				console.log(err);
 				this.setStatus(1);
 			}
 		},
