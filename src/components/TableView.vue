@@ -33,7 +33,7 @@ export default defineComponent({
 		columns() {
 			//@ts-ignore
 			return Object.keys(this.data[0] ?? []);
-		}
+		},
 	}
 });
 </script>
@@ -64,6 +64,10 @@ table > thead > * > th {
 
 .tableview {
 	overflow-y: auto;
+}
+
+table tbody tr:hover {
+	background-color: rgba(255, 255, 255, 0.644);
 }
 
 table > * > * > th,

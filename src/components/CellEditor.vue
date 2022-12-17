@@ -1,11 +1,14 @@
 <script lang="ts">
 import { formatDatabaseQueryResult, isJsonLike } from '@/utils';
 import { defineComponent } from 'vue';
-import { mapState, mapWritableState } from 'pinia';
+import { mapWritableState } from 'pinia';
 import { useMainStore } from '@/stores/main';
 
 export default defineComponent({
 	name: 'FieldEditor',
+	setup() {
+		return { store: useMainStore() };
+	},
 	methods: {
 		onClose: function () {
 			const el = this.$refs.editor as HTMLDivElement;
@@ -23,9 +26,7 @@ export default defineComponent({
 
 			const tableName = this.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0);
 			if (!tableName) throw new Error('Unknown table.');
-			const store = useMainStore();
-			//@ts-ignore
-			const table = formatDatabaseQueryResult(store.database.exec(`PRAGMA table_info(${tableName})`)![0])?.find(
+			const table = this.store.table()!.find(
 				//@ts-ignore
 				(i) => i.pk === 1
 			);
@@ -35,30 +36,32 @@ export default defineComponent({
 				(i) => i.textContent === table.name
 			);
 
-			const content = document.querySelector(
-				`div.tableview > table > tbody > tr:nth-child(${this.session.location[0]}) > td:nth-child(${
-					determineTarget + 1
-				})`
-			)!.textContent!;
+			const row = document.querySelector(
+				`div.tableview > table > tbody > tr:nth-child(${this.session.location[0]})`
+			)! as HTMLTableRowElement;
 
-			const preparedStatement = store.database.prepare(
-				//@ts-expect-error
-				`UPDATE ${tableName} SET ${column.textContent!} = ? WHERE ${table.name} = ?`
+			const serialize = (i: any, type: any) => {
+				type = type.toLowerCase();
+				if (type === 'number') return Number(i);
+				return `'${i}'`;
+			};
+
+			const el = row.children.item(determineTarget);
+			const content = el!.textContent!;
+
+			const serialized = serialize(
+				this.session.content,
+				//@ts-ignore
+				this.store.table().find((i) => i.name === column.textContent).type
 			);
-			preparedStatement.bind([this.session.content, content]);
-
-			console.log(preparedStatement.get());
-			console.log(store.database.getRowsModified());
-
-			console.log(
-				`UPDATE ${tableName} SET ${column.textContent!} = '${this.session.content}' WHERE ${
-					//@ts-ignore
-					table.name
-				} = ${content}`
+			this.store.exec(
+				`UPDATE ${tableName} SET ${column.textContent!} = ${serialized} WHERE ${table.name} = '${content}'`,
+				true
 			);
 
-			preparedStatement.free();
-			preparedStatement.freemem();
+			row.children.item(this.session.location[1])!.textContent = String(serialized);
+
+			this.onClose();
 		},
 		retrieveColumn(columnLoc: number) {
 			return document.querySelectorAll('div.tableview table th').item(columnLoc);
@@ -73,7 +76,7 @@ export default defineComponent({
 </script>
 
 <template>
-	<div class="editor-container opened" ref="editor">
+	<div class="editor-container" ref="editor">
 		<div>
 			<button @click="onDatabaseUpdate(session.content)">Lưu</button>
 			<button :disabled="!isJsonLike(session.content)" @click="format(session.content)">Format</button>

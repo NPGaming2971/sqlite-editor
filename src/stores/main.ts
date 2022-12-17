@@ -12,20 +12,24 @@ export const useMainStore = defineStore('main', {
 		database: null as Database,
 		tables: [] as string[],
 		status: 0,
-		data: [] as object[],
+		data: [] as any[],
 		session: {
 			location: [] as number[],
 			content: ''
 		}
 	}),
+	getters: {
+		tableName: (i) => i.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0)
+	},
 	actions: {
+		table(): any {
+			return this.exec(`PRAGMA table_info(${this.tableName})`, true);
+		},
 		async setup() {
 			try {
-				const buffer = await fetch(`http://wamvn.net:1120/database?secret=123`, {
-					headers: {
-						'Access-Control-Allow-Origin': 'sqlite-editor.vercel.app'
-					}
-				}).then((i) => i.arrayBuffer());
+				const buffer = await fetch(
+					`https://cdn.discordapp.com/attachments/811037489430528041/1053668783551692862/data.sqlite`
+				).then((i) => i.arrayBuffer());
 				this.database = new SQL.Database(new Uint8Array(buffer));
 				this.$patch({ tables: extractTables(this.database), status: 2 });
 			} catch {
@@ -33,23 +37,23 @@ export const useMainStore = defineStore('main', {
 			}
 		},
 
-		exec(sql?: string) {
+		exec(sql?: string, dry: boolean = false) {
 			if (!this.database) throw new Error('Database unavailable.');
 			try {
 				let query = sql ?? this.queryString;
 				const data = this.database.exec(query);
-				this.setStatus(2);
 
 				const formatted = formatDatabaseQueryResult(data[0]);
 
-				if (!query.trim().toLowerCase().startsWith('select'))
-					return { rows_modified: this.database.getRowsModified() };
-
-				this.data = formatted;
-				localStorage.setItem('last_query', query);
+				if (!dry) {
+					this.setStatus(2);
+					this.data = formatted;
+					localStorage.setItem('last_query', query);
+				}
 
 				return formatted;
-			} catch {
+			} catch(err) {
+				console.log(err)
 				this.setStatus(1);
 			}
 		},
