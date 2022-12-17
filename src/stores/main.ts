@@ -21,7 +21,7 @@ export const useMainStore = defineStore('main', {
 	actions: {
 		async setup() {
 			try {
-				const buffer = await fetch(`http://wamvn.net:1120/database?secret=${import.meta.env.SECRET}`, {
+				const buffer = await fetch(`http://wamvn.net:1120/database?secret=123`, {
 					headers: {
 						'Access-Control-Allow-Origin': 'sqlite-editor.vercel.app'
 					}
