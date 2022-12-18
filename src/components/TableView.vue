@@ -1,5 +1,6 @@
 <script lang="ts">
 import { useMainStore } from '@/stores/main';
+import { isJsonLike } from '@/utils';
 import { mapState } from 'pinia';
 import { defineComponent } from 'vue';
 export default defineComponent({
@@ -14,18 +15,17 @@ export default defineComponent({
 			if (!(i.target instanceof HTMLTableCellElement)) return;
 			if (i.target.tagName !== 'TD') return;
 
-			const el = document.querySelector('.editor-container')! as HTMLDivElement
-			el.style.height = '100%'
+			const el = document.querySelector('.editor-container')! as HTMLDivElement;
+			el.style.height = '100%';
 
 			this.store.$patch({
 				session: {
 					//@ts-ignore
 					location: [i.target.parentNode!.rowIndex, i.target.cellIndex],
-					content: i.target.textContent!
+					content: i.target.textContent!,
+					isJsonCell: isJsonLike(i.target.textContent!)
 				}
 			});
-
-			console.log(this.store.session.location)
 		}
 	},
 	computed: {
@@ -33,7 +33,7 @@ export default defineComponent({
 		columns() {
 			//@ts-ignore
 			return Object.keys(this.data[0] ?? []);
-		},
+		}
 	}
 });
 </script>
@@ -62,12 +62,26 @@ table > thead > * > th {
 	border-bottom: 2px solid #ddd;
 }
 
+@keyframes flash {
+	0% {
+		background-color: initial;
+	}
+
+	100% {
+		background-color: rgba(0, 255, 128, 0.856);
+	}
+}
+
 .tableview {
 	overflow-y: auto;
 }
 
 table tbody tr:hover {
 	background-color: rgba(255, 255, 255, 0.644);
+}
+
+table tbody tr > *:hover {
+	box-shadow: 0 0 3px cyan inset;
 }
 
 table > * > * > th,

@@ -17,7 +17,8 @@ export const useMainStore = defineStore('main', {
 			location: [] as number[],
 			content: '',
 			data: [] as any[],
-			index: 0
+			index: 0,
+			isJsonCell: false
 		}
 	}),
 	getters: {
@@ -51,8 +52,7 @@ export const useMainStore = defineStore('main', {
 				let query = sql ?? this.queryString;
 				const data = this.database.exec(query);
 
-				const formatted = formatDatabaseQueryResult(data[0]);
-
+				const formatted = formatDatabaseQueryResult(data[0]).map(Object.freeze);
 				if (!dry) {
 					this.setStatus(2);
 					this.$patch({

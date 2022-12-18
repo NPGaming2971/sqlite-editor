@@ -1,5 +1,5 @@
 <script lang="ts">
-import { formatDatabaseQueryResult, isJsonLike } from '@/utils';
+import { isJsonLike } from '@/utils';
 import { defineComponent } from 'vue';
 import { mapWritableState } from 'pinia';
 import { useMainStore } from '@/stores/main';
@@ -15,13 +15,26 @@ export default defineComponent({
 
 			el.style.height = '0%';
 		},
-		format(t: string) {
-			const formatted = JSON.stringify(JSON.parse(t), null, 4);
+		format(t: string, i: number = 4) {
+			const formatted = JSON.stringify(JSON.parse(t), null, i);
 			this.session.content = formatted;
 		},
 		isJsonLike,
-		onDatabaseUpdate(param: string) {
-			this.session.content = param;
+		isJsonString(str: string) {
+			try {
+				JSON.parse(str);
+			} catch (e) {
+				return false;
+			}
+			return true;
+		},
+		onDatabaseUpdate() {
+			if (this.store.session.isJsonCell) {
+				if (!this.isJsonString(this.session.content)) {
+					if (!confirm('JSON không hợp lệ.\nBạn vẫn muốn lưu chứ?')) return;
+				} else this.format(this.session.content, 0);
+			}
+
 			const column = this.retrieveColumn(this.session.location[1]);
 
 			const tableName = this.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0);
@@ -43,7 +56,7 @@ export default defineComponent({
 			const serialize = (i: any, type: any) => {
 				type = type.toLowerCase();
 				if (type === 'number') return Number(i);
-				return `${i}`;
+				return i;
 			};
 
 			const el = row.children.item(determineTarget);
@@ -54,6 +67,7 @@ export default defineComponent({
 				//@ts-ignore
 				this.store.table().find((i) => i.name === column.textContent).type
 			);
+
 			this.store.exec(
 				`UPDATE ${tableName} SET ${column.textContent!} = ${
 					typeof serialized === 'number' ? serialized : `'${serialized}'`
@@ -80,8 +94,8 @@ export default defineComponent({
 <template>
 	<div class="editor-container" ref="editor">
 		<div>
-			<button @click="onDatabaseUpdate(session.content)">Lưu</button>
-			<button :disabled="!isJsonLike(session.content)" @click="format(session.content)">Format</button>
+			<button @click="onDatabaseUpdate()">Lưu</button>
+			<button :disabled="!session.isJsonCell" @click="format(session.content)">Format</button>
 			<button @click="onClose">Đóng</button>
 		</div>
 		<codemirror :style="{ height: '100%' }" v-model="session.content" />
