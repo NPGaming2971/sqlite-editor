@@ -1,9 +1,10 @@
 <script lang="ts">
 import { useMainStore } from '@/stores/main';
-import { mapWritableState, MutationType, type SubscriptionCallback, type SubscriptionCallbackMutation } from 'pinia';
+import { mapWritableState, MutationType } from 'pinia';
 import { defineComponent } from 'vue';
 import CheckIcon from '@/components/icons/Check.vue';
 import CrossIcon from '@/components/icons/Cross.vue';
+import { extractTables } from '@/utils';
 
 const mapper = {
 	0: ['grey', 'Unavailable'],
@@ -26,6 +27,7 @@ export default defineComponent({
 	name: 'TableRow',
 	components: { CheckIcon, CrossIcon },
 	methods: {
+		extractTables,
 		update(val: number) {
 			const [color, text] = mapper[val as keyof typeof mapper];
 			const elem = this.$refs.footer as HTMLDivElement;
@@ -39,6 +41,13 @@ export default defineComponent({
 
 			this.store.$patch({ queryString: `SELECT * FROM ${i.target.textContent} LIMIT 50` });
 			this.store.exec();
+		},
+		tableInfo(i: MouseEvent) {
+			if (!(i.target instanceof HTMLSpanElement)) return;
+			if (i.target.id || !i.target.textContent) return;
+
+			this.store.$patch({ queryString: `PRAGMA table_info(${i.target.textContent})` });
+			this.store.exec();
 		}
 	},
 	computed: {
@@ -48,7 +57,7 @@ export default defineComponent({
 </script>
 
 <template>
-	<div class="footer" ref="footer" @click="switchTable">
+	<div class="footer" ref="footer" @click="switchTable" @contextmenu.prevent="tableInfo">
 		<div class="status">
 			<CheckIcon v-if="status === 2" /><CrossIcon v-else-if="[1, 3].includes(status)" /><span id="status"
 				>Unknown</span
@@ -67,6 +76,9 @@ div.table {
 	display: inline-flex;
 }
 
+span #reload {
+	background-color: red;
+}
 div.status:first-child {
 	padding-left: 5px;
 }
@@ -102,5 +114,6 @@ span {
 	color: white;
 	overflow-y: hidden;
 	overflow-x: auto;
+	user-select: none;
 }
 </style>

@@ -3,6 +3,8 @@ import { useMainStore } from '@/stores/main';
 import { isJsonLike } from '@/utils';
 import { mapState } from 'pinia';
 import { defineComponent } from 'vue';
+const SPECIAL_COLUMN_NAME = ['$sqlite_editor_readonly']
+
 export default defineComponent({
 	name: 'TableView',
 	setup() {
@@ -11,17 +13,20 @@ export default defineComponent({
 		return { store };
 	},
 	methods: {
-		onCellClick(i: MouseEvent) {
+		onCellClick(i: Event, e: any, g: number) {
 			if (!(i.target instanceof HTMLTableCellElement)) return;
 			if (i.target.tagName !== 'TD') return;
+			if (e.$sqlite_editor_readonly) return;
 
 			const el = document.querySelector('.editor-container')! as HTMLDivElement;
 			el.style.height = '100%';
 
+			console.log([g, i.target.cellIndex])
+
 			this.store.$patch({
 				session: {
 					//@ts-ignore
-					location: [i.target.parentNode!.rowIndex, i.target.cellIndex],
+					location: [g, i.target.cellIndex],
 					content: i.target.textContent!,
 					isJsonCell: isJsonLike(i.target.textContent!)
 				}
@@ -33,75 +38,37 @@ export default defineComponent({
 		columns() {
 			//@ts-ignore
 			return Object.keys(this.data[0] ?? []);
-		}
+		},
+		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME
 	}
 });
 </script>
 
 <template>
-	<div class="tableview">
-		<table @click="(i) => onCellClick(i)">
-			<thead>
-				<tr>
-					<th v-for="column in columns" :key="column">{{ column }}</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="obj in data">
-					<td v-for="val in Object.values(obj)">{{ val }}</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
+	<QTable
+		:rows="data"
+		:columns="columns.map((i) => ({ name: i, label: i, field: i, align: 'left', sortable: true }))"
+		:pagination="{ rowsPerPage: 50 }"
+		:rows-per-page-options="[0]"
+		:visible-columns="columns.filter(i => !SPECIAL_COLUMN_NAME.includes(i))"
+		@row-click="onCellClick"
+	>
+		<template v-slot:body-cell="scope">
+			<QTd :class="{ cell: true }">
+				<template v-slot>{{ scope.value }}</template>
+			</QTd>
+		</template>
+		<template v-slot:no-data>Không có dữ liệu.</template>
+	</QTable>
 </template>
 
-<style scoped>
-table > thead > * > th {
-	font-weight: bold;
-	cursor: pointer;
-	border-bottom: 2px solid #ddd;
-}
-
-@keyframes flash {
-	0% {
-		background-color: initial;
-	}
-
-	100% {
-		background-color: rgba(0, 255, 128, 0.856);
-	}
-}
-
-.tableview {
-	overflow-y: auto;
-}
-
-table tbody tr:hover {
-	background-color: rgba(255, 255, 255, 0.644);
-}
-
-table tbody tr > *:hover {
-	box-shadow: 0 0 3px cyan inset;
-}
-
-table > * > * > th,
-tr > td {
-	border: 1px solid #ddd;
-	padding: 5px;
-	font-size: 15px;
-	max-width: 200px;
+<style>
+td.cell {
+	max-width: 400px;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
 	cursor: pointer;
-}
-
-table {
-	border-collapse: collapse;
-	overflow: hidden;
-	height: max-content;
-	width: 100%;
-	height: 100%;
-	overflow-x: auto;
 }
 </style>

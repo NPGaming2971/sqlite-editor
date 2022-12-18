@@ -37,21 +37,25 @@ export default defineComponent({
 
 			const column = this.retrieveColumn(this.session.location[1]);
 
-			const tableName = this.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0);
+			console.log(column)
+			const tableName = this.store.tableName;
 			if (!tableName) throw new Error('Unknown table.');
+
 			const table = this.store.table()!.find(
 				//@ts-ignore
 				(i) => i.pk === 1
 			);
 
-			const determineTarget = Array.from(document.querySelectorAll('div.tableview table th')).findIndex(
+			const determineTarget = Array.from(document.querySelectorAll('table.q-table thead th')).findIndex(
 				//@ts-ignore
-				(i) => i.textContent === table.name
+				(i) => i.textContent === table.name && Boolean(console.log(i.textContent) ?? true)
 			);
 
 			const row = document.querySelector(
-				`div.tableview > table > tbody > tr:nth-child(${this.session.location[0]})`
+				`table > tbody > tr:nth-child(${this.session.location[0] + 1})`
 			)! as HTMLTableRowElement;
+
+			console.log(row)
 
 			const serialize = (i: any, type: any) => {
 				type = type.toLowerCase();
@@ -60,29 +64,30 @@ export default defineComponent({
 			};
 
 			const el = row.children.item(determineTarget);
-			const content = el!.textContent!;
+			const content = el?.textContent!;
+			const clName = column.childNodes.item(0)!.textContent
 
 			const serialized = serialize(
 				this.session.content,
 				//@ts-ignore
-				this.store.table().find((i) => i.name === column.textContent).type
+				this.store.table().find((i) => i.name === clName).type
 			);
 
-			this.store.exec(
-				`UPDATE ${tableName} SET ${column.textContent!} = ${
+			const r = this.store.exec(
+				`UPDATE ${tableName} SET ${clName} = ${
 					typeof serialized === 'number' ? serialized : `'${serialized}'`
 				} WHERE ${table.name} = '${content}'`,
 				true
 			);
 
-			row.children.item(this.session.location[1])!.textContent = String(serialized);
-
-			this.onClose();
+			if (r) {
+				row.children.item(this.session.location[1])!.textContent = String(serialized);
+				this.onClose();
+			}
 		},
 		retrieveColumn(columnLoc: number) {
-			return document.querySelectorAll('div.tableview table th').item(columnLoc);
+			return document.querySelectorAll('div.q-table__middle.scroll > table > thead > tr th').item(columnLoc);
 		},
-		retrieveRow() {}
 	},
 
 	computed: {
@@ -114,7 +119,7 @@ div.editor-container > div:first-of-type > *:not(button:last-of-type) {
 }
 
 button:disabled {
-	background-color: #555555;
+	background-color: #353535;
 }
 
 div.editor-container {

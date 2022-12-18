@@ -32,7 +32,7 @@ export default defineComponent({
 </script>
 
 <template>
-	<div class="controller" @keydown.ctrl.enter="onQueryExecute()">
+		<div class="controller" @keydown.ctrl.enter="onQueryExecute()">
 		<span>Thanh nhập query</span>
 		<div class="input-field">
 			<textarea ref="text" type="text" id="queryBar" @input="(i) => onQueryUpdate(i)">{{ queryString }}</textarea>
@@ -42,6 +42,9 @@ export default defineComponent({
 </template>
 
 <style scoped>
+
+
+
 #queryBar {
 	border-radius: 6px;
 	padding: 10px;
