@@ -2,9 +2,13 @@ import { defineStore } from 'pinia';
 import initSqlJs, { type Database } from 'sql.js';
 import { extractTables, formatDatabaseQueryResult } from '@/utils';
 import chunk from 'lodash.chunk';
+import type { Parser, AST } from 'node-sql-parser';
 const SQL = await initSqlJs({
 	locateFile: (url) => `https://sql.js.org/dist/${url}`
 });
+
+//@ts-ignore
+const parser = new window.NodeSQLParser.Parser() as Parser;
 
 export const useMainStore = defineStore('main', {
 	state: () => ({
@@ -22,23 +26,36 @@ export const useMainStore = defineStore('main', {
 		}
 	}),
 	getters: {
-		tableName: (i) => i.queryString.match(/(?<=from|join)\s+(\w+)/gi)?.at(0),
-		data: (i) => i.session.data.at(i.session.index) ?? []
+		ast: (i) => {
+			try {
+				return parser.astify(i.queryString) as AST;
+			} catch {
+				return null;
+			}
+		},
+		data: (i) => i.session.data.at(i.session.index) ?? [],
+		tableName: (i) => {
+			try {
+				return parser.tableList(i.queryString).at(0)!.split('::').at(2);
+			} catch {
+				return '';
+			}
+		}
 	},
 	actions: {
-		table(): any {
-			return this.exec(`PRAGMA table_info(${this.tableName})`, true);
+		formatQuery(i: string) {
+			return i.trim().toLowerCase();
+		},
+		table(i: boolean = true): any {
+			return this.exec(`PRAGMA table_info(${this.tableName})`, i);
 		},
 		async setup() {
 			try {
-				const buffer = await fetch(
-					`http://wamvn.net:1120/database?secret=123`,
-					{
-						headers: {
-							'Access-Control-Allow-Origin': '*'
-						}
+				const buffer = await fetch(`http://wamvn.net:1120/database?secret=123`, {
+					headers: {
+						'Access-Control-Allow-Origin': '*'
 					}
-				).then((i) => i.arrayBuffer());
+				}).then((i) => i.arrayBuffer());
 				this.database = new SQL.Database(new Uint8Array(buffer));
 				this.$patch({ tables: extractTables(this.database), status: 2 });
 			} catch {
@@ -50,16 +67,23 @@ export const useMainStore = defineStore('main', {
 			if (!this.database) throw new Error('Database unavailable.');
 			try {
 				let query = sql ?? this.queryString;
-				const data = this.database.exec(query);
 
-				const formatted = formatDatabaseQueryResult(data[0]).map(Object.freeze);
+				const ast = this.ast;
+				if (ast?.type === 'create') {
+					if (ast?.keyword === 'table') this.tables = extractTables(this.database);
+				}
+
+				const data = this.database.exec(query);
+				const formatted = formatDatabaseQueryResult(data[0]).map((i) =>
+					Object.freeze(Object.assign(i, !this.tableName ? { $sqlite_editor_readonly: true } : {}))
+				);
 				if (!dry) {
-					this.setStatus(2);
 					this.$patch({
 						session: {
 							data: chunk(formatted, 50) as any,
 							index: 0
-						}
+						},
+						status: 2
 					});
 
 					localStorage.setItem('last_query', query);
