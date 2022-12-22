@@ -4,6 +4,7 @@ import MainViewVue from './views/MainView.vue';
 
 const store = useMainStore();
 store.setup();
+store.session.inDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 </script>
 
 <template>

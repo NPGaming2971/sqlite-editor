@@ -39,7 +39,7 @@ export default defineComponent({
 			//@ts-ignore
 			return Object.keys(this.data[0] ?? []);
 		},
-		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME
+		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME,
 	}
 });
 </script>
@@ -49,6 +49,7 @@ export default defineComponent({
 		:rows="data"
 		:columns="columns.map((i) => ({ name: i, label: i, field: i, align: 'left', sortable: true }))"
 		:pagination="{ rowsPerPage: 50 }"
+		:dark="store.session.inDarkMode"
 		:rows-per-page-options="[0]"
 		:visible-columns="columns.filter(i => !SPECIAL_COLUMN_NAME.includes(i))"
 		@row-click="onCellClick"

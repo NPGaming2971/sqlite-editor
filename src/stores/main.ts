@@ -18,11 +18,13 @@ export const useMainStore = defineStore('main', {
 		tables: [] as string[],
 		status: 0,
 		session: {
+			token: null as string | null,
 			location: [] as number[],
 			content: '',
 			data: [] as any[],
 			index: 0,
-			isJsonCell: false
+			isJsonCell: false,
+			inDarkMode: false
 		}
 	}),
 	getters: {

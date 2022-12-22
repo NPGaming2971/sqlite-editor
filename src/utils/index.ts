@@ -6,6 +6,8 @@ const JSON_ENDS = {
 	'{': /}$/
 };
 
+export const ALLOWED_USERS = ['792645340632317992', '537958224922542084']
+
 export function isJsonLike(str: string): boolean {
 	const jsonStart = str.match(JSON_START);
 	return (jsonStart && JSON_ENDS[jsonStart[0] as keyof typeof JSON_ENDS].test(str)) ?? false;
