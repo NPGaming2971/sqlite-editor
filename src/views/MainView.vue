@@ -6,8 +6,10 @@ import TableViewVue from '@/components/TableView.vue';
 import ViewPagination from '@/components/ViewPagination.vue';
 import { defineComponent } from 'vue';
 import { QDialog, QCard, QCardSection, QBtn } from 'quasar';
-import { ALLOWED_USERS } from '@/utils';
+import { ALLOWED_USERS, OAUTH2_LINK } from '@/utils';
 import { useMainStore } from '@/stores/main';
+import { MutationType } from 'pinia';
+import ErrorDialog from '@/components/ErrorDialog.vue';
 
 export default defineComponent({
 	data() {
@@ -29,28 +31,32 @@ export default defineComponent({
 		const lastQuery = localStorage.getItem('last_query');
 
 		if (lastQuery) main.$patch({ queryString: lastQuery });
-		return { session: main.session };
+		return { store: main };
 	},
 	async mounted() {
 		let accessToken = undefined,
 			tokenType = undefined;
 		//@ts-ignore
 		let stored = localStorage.getItem('token_string');
+		localStorage.removeItem('token_string');
 
 		const blockAccess = () => {
-			this.$q.dialog({
-				dark: this.session.inDarkMode,
-				title: 'Lưu ý',
-				message:
-					'Bạn không có quyền truy cập nội dung này.<br>Nhấn vào link <a href="https://discord.com/oauth2/authorize?client_id=891163758351745044&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2F&response_type=token&scope=identify">này<a/> để đăng nhập.',
-				persistent: true,
-				cancel: false,
-				ok: false,
-				style: {
-					color: this.session.inDarkMode ? 'white' : 'black'
-				},
-				html: true
-			});
+			this.$q
+				.dialog({
+					dark: this.store.session.inDarkMode,
+					title: 'Lưu ý',
+					message: 'Bạn không có quyền truy cập nội dung này.',
+					persistent: true,
+					cancel: false,
+					style: {
+						color: this.store.session.inDarkMode ? 'white' : 'black'
+					},
+					html: true,
+					ok: 'Đăng nhập'
+				})
+				.onOk((i) => {
+					location.assign(OAUTH2_LINK);
+				});
 		};
 
 		if (!stored) {
@@ -72,21 +78,31 @@ export default defineComponent({
 
 		if (!authUser || !ALLOWED_USERS.includes(authUser.id)) return blockAccess();
 
-		this.session.token = stored;
+		this.store.session.token = stored;
 		this.authorized = true;
+		localStorage.removeItem('token_string');
+
+		this.store.$subscribe((_) => {
+			if (_.type === MutationType.patchObject && _.payload.session?.error) {
+				this.$q.dialog({
+					component: ErrorDialog,
+					componentProps: { error: _.payload.session.error },
+				});
+			}
+		});
 
 		window.onbeforeunload = () => {
-			localStorage.setItem('token_string', this.session.token!);
+			localStorage.setItem('token_string', this.store.session.token!);
 		};
 	}
 });
 </script>
 <template>
 	<div v-if="authorized">
-		<QueryInputVue></QueryInputVue>
-		<ViewPagination v-if="session.data.length > 1"></ViewPagination>
-		<KeepAlive><TableViewVue /></KeepAlive>
-		<KeepAlive><StatusBar /></KeepAlive>
+		<QueryInputVue />
+		<ViewPagination v-if="store.session.data.length > 1"></ViewPagination>
+		<TableViewVue />
+		<StatusBar />
 		<CellEditorVue :hidden="true"></CellEditorVue>
 	</div>
 </template>

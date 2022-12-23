@@ -3,7 +3,7 @@ import { useMainStore } from '@/stores/main';
 import { isJsonLike } from '@/utils';
 import { mapState } from 'pinia';
 import { defineComponent } from 'vue';
-const SPECIAL_COLUMN_NAME = ['$sqlite_editor_readonly']
+const SPECIAL_COLUMN_NAME = ['$sqlite_editor_readonly'];
 
 export default defineComponent({
 	name: 'TableView',
@@ -16,12 +16,22 @@ export default defineComponent({
 		onCellClick(i: Event, e: any, g: number) {
 			if (!(i.target instanceof HTMLTableCellElement)) return;
 			if (i.target.tagName !== 'TD') return;
-			if (e.$sqlite_editor_readonly) return;
+			if (e.$sqlite_editor_readonly) {
+				this.$q.dialog({
+					title: 'Lưu ý',
+					message: 'Bạn không thể chỉnh sửa bảng này.',
+					dark: this.store.session.inDarkMode,
+					style: {
+						color: this.store.session.inDarkMode ? 'white' : 'black'
+					}
+				});
+				return;
+			}
 
 			const el = document.querySelector('.editor-container')! as HTMLDivElement;
 			el.style.height = '100%';
 
-			console.log([g, i.target.cellIndex])
+			console.log([g, i.target.cellIndex]);
 
 			this.store.$patch({
 				session: {
@@ -39,7 +49,7 @@ export default defineComponent({
 			//@ts-ignore
 			return Object.keys(this.data[0] ?? []);
 		},
-		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME,
+		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME
 	}
 });
 </script>
@@ -51,7 +61,7 @@ export default defineComponent({
 		:pagination="{ rowsPerPage: 50 }"
 		:dark="store.session.inDarkMode"
 		:rows-per-page-options="[0]"
-		:visible-columns="columns.filter(i => !SPECIAL_COLUMN_NAME.includes(i))"
+		:visible-columns="columns.filter((i) => !SPECIAL_COLUMN_NAME.includes(i))"
 		@row-click="onCellClick"
 	>
 		<template v-slot:body-cell="scope">
@@ -67,7 +77,6 @@ export default defineComponent({
 td.cell {
 	max-width: 400px;
 	overflow: hidden;
-	text-overflow: ellipsis;
 	text-overflow: ellipsis !important;
 	white-space: nowrap !important;
 	cursor: pointer;

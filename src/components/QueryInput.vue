@@ -36,7 +36,7 @@ export default defineComponent({
 		<span>Thanh nhập query</span>
 		<div class="input-field">
 			<textarea ref="text" type="text" id="queryBar" @input="(i) => onQueryUpdate(i)">{{ queryString }}</textarea>
-			<button @click="onQueryExecute()">Chạy query</button>
+			<button :disabled="!Boolean(store.database)" @click="onQueryExecute()">Chạy query</button>
 		</div>
 	</div>
 </template>

@@ -24,7 +24,8 @@ export const useMainStore = defineStore('main', {
 			data: [] as any[],
 			index: 0,
 			isJsonCell: false,
-			inDarkMode: false
+			inDarkMode: false,
+			error: null as Error | null
 		}
 	}),
 	getters: {
@@ -92,8 +93,9 @@ export const useMainStore = defineStore('main', {
 				}
 
 				return formatted;
-			} catch (err) {
+			} catch (err: any) {
 				console.log(err);
+				this.$patch({ session: { error: err } });
 				this.setStatus(1);
 			}
 		},

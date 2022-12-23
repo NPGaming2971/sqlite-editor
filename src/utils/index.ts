@@ -5,6 +5,7 @@ const JSON_ENDS = {
 	'[': /]$/,
 	'{': /}$/
 };
+export const OAUTH2_LINK = "https://discord.com/oauth2/authorize?client_id=891163758351745044&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2F&response_type=token&scope=identify"
 
 export const ALLOWED_USERS = ['792645340632317992', '537958224922542084']
 

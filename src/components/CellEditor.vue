@@ -118,9 +118,6 @@ div.editor-container > div:first-of-type > *:not(button:last-of-type) {
 	margin-right: 3px;
 }
 
-button:disabled {
-	background-color: #353535;
-}
 
 div.editor-container {
 	position: fixed;
