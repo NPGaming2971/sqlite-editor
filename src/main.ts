@@ -16,6 +16,7 @@ import './assets/main.css';
 import 'quasar/src/css/index.sass';
 import '@quasar/extras/material-icons/material-icons.css'
 
+
 const app = createApp(App);
 
 app.use(createPinia());

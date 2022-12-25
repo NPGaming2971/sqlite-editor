@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { MutationType } from 'pinia';
+import { getCurrentInstance } from 'vue';
 import { useMainStore } from './stores/main';
+import { execute } from './utils/communicator';
 import MainViewVue from './views/MainView.vue';
+const app = getCurrentInstance()!;
 
 const store = useMainStore();
-store.setup();
+store.prepare();
+
+app.appContext.app.config.globalProperties.$store = store;
+app.appContext.app.config.globalProperties.$execute = execute
 
 const media = window.matchMedia('(prefers-color-scheme: dark)');
-store.session.inDarkMode = media.matches;
+store.views.inDarkMode = media.matches;
 
 media.addEventListener('change', (i) => {
-	store.session.inDarkMode = i.matches;
+	store.views.inDarkMode = i.matches;
 });
 </script>
 

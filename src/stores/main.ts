@@ -1,96 +1,95 @@
+import { execute } from '@/utils/communicator';
 import { defineStore } from 'pinia';
-import initSqlJs, { type Database } from 'sql.js';
-import { extractTables, formatDatabaseQueryResult } from '@/utils';
-import chunk from 'lodash.chunk';
-import type { Parser, AST } from 'node-sql-parser';
-const SQL = await initSqlJs({
-	locateFile: (url) => `https://sql.js.org/dist/${url}`
-});
+import { applyFindCount, applyOffset, ast, MAX_ENTRIES_PER_PAGE, STATIC_QUERY, tableName } from '@/utils';
+import type { Parser, Select } from 'node-sql-parser';
+import type { TableColumnPragma } from '@/utils/typings';
 
-//@ts-ignore
+//@ts-expect-error
 const parser = new window.NodeSQLParser.Parser() as Parser;
 
 export const useMainStore = defineStore('main', {
 	state: () => ({
 		queryString: '',
-		//@ts-expect-error
-		database: null as Database,
-		tables: [] as string[],
+		meta: {
+			tables: new Map<string, TableColumnPragma[]>(),
+			table: null as string | null
+		},
 		status: 0,
+		ready: false,
 		session: {
-			token: null as string | null,
 			location: [] as number[],
 			content: '',
 			data: [] as any[],
 			index: 0,
+			maxIndex: 0,
+			error: null as Error | null,
 			isJsonCell: false,
-			inDarkMode: false,
-			error: null as Error | null
+			row: null as any
+		},
+		views: {
+			inDarkMode: false
+		},
+		auth: {
+			token: null as string | null
 		}
 	}),
 	getters: {
-		ast: (i) => {
-			try {
-				return parser.astify(i.queryString) as AST;
-			} catch {
-				return null;
-			}
-		},
-		data: (i) => i.session.data.at(i.session.index) ?? [],
-		tableName: (i) => {
-			try {
-				return parser.tableList(i.queryString).at(0)!.split('::').at(2);
-			} catch {
-				return '';
-			}
-		}
+		tableName: (i) => tableName(parser, i.queryString),
+		currentTable: ({ meta, queryString }) => meta.tables.get(tableName(parser, queryString)!),
+		ast: ({ queryString }) => ast(parser, queryString)
 	},
 	actions: {
-		formatQuery(i: string) {
-			return i.trim().toLowerCase();
+		async loadTables() {
+			const tables: string[] = (await execute(STATIC_QUERY.TABLES)).map((i: any) => i.name);
+			const info = await execute(tables.map((i) => `PRAGMA table_info(${i})`));
+
+			tables.forEach((e, i0) => this.meta.tables.set(e, info[i0]));
 		},
-		table(i: boolean = true): any {
-			return this.exec(`PRAGMA table_info(${this.tableName})`, i);
-		},
-		async setup() {
+		async prepare() {
 			try {
-				const buffer = await fetch(`http://wamvn.net:1120/database?secret=123`, {
-					headers: {
-						'Access-Control-Allow-Origin': '*'
-					}
-				}).then((i) => i.arrayBuffer());
-				this.database = new SQL.Database(new Uint8Array(buffer));
-				this.$patch({ tables: extractTables(this.database), status: 2 });
-			} catch {
+				await this.loadTables();
+
+				this.ready = true;
+				this.setStatus(2);
+			} catch (err) {
+				console.error(err);
 				this.setStatus(3);
 			}
 		},
+		async exec(sql?: string, { dry = false, resetIndex = false } = {}) {
+			if (!this.ready || this.status === 4) throw new Error('App unavailable.');
 
-		exec(sql?: string, dry: boolean = false) {
-			if (!this.database) throw new Error('Database unavailable.');
 			try {
-				let query = sql ?? this.queryString;
+				this.setStatus(4);
 
 				const ast = this.ast;
-				if (ast?.type === 'create') {
-					if (ast?.keyword === 'table') this.tables = extractTables(this.database);
+				if (resetIndex) this.session.index = 0;
+
+				if (ast) {
+					//@ts-ignore
+					const func = this['handle' + ast.type.charAt(0).toUpperCase() + ast.type.slice(1)];
+					if (func) await func(ast);
 				}
 
-				const data = this.database.exec(query);
-				const formatted = formatDatabaseQueryResult(data[0]).map((i) =>
+				let query = sql ?? this.queryString;
+
+				const data = await execute(query);
+				const formatted = data.map((i: any) =>
 					Object.freeze(Object.assign(i, !this.tableName ? { $sqlite_editor_readonly: true } : {}))
 				);
+
 				if (!dry) {
 					this.$patch({
 						session: {
-							data: chunk(formatted, 50) as any,
-							index: 0
+							data: formatted
 						},
 						status: 2
 					});
 
 					localStorage.setItem('last_query', query);
 				}
+
+				console.log(query);
 
 				return formatted;
 			} catch (err: any) {
@@ -99,9 +98,24 @@ export const useMainStore = defineStore('main', {
 				this.setStatus(1);
 			}
 		},
-
 		setStatus(n: number) {
 			this.$patch({ status: n });
+		},
+		async handleSelect(ast: Select) {
+			const data = await execute(applyFindCount(parser, ast));
+			const maxPage = Math.trunc(data[0]['COUNT(*)'] / MAX_ENTRIES_PER_PAGE);
+			this.session.maxIndex = maxPage - 1;
+
+			this.$patch({ queryString: applyOffset(parser, ast, this.session.index) });
+		},
+		async handleAlter() {
+			await this.loadTables();
+		},
+		async handleCreate() {
+			await this.loadTables();
+		},
+		async handleDrop() {
+			await this.loadTables();
 		}
 	}
 });

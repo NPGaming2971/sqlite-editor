@@ -4,22 +4,18 @@ import { mapState, MutationType } from 'pinia';
 import { defineComponent } from 'vue';
 export default defineComponent({
 	name: 'QueryInput',
-	setup: () => {
-		const store = useMainStore();
-		return { store };
-	},
 	methods: {
 		onQueryExecute() {
-			this.store.exec();
+			this.$store.exec(undefined, { resetIndex: true });
 		},
 		onQueryUpdate(i: Event) {
 			const elem = i.target as HTMLInputElement;
-			this.store.$patch({ queryString: elem.value });
+			this.$store.$patch({ queryString: elem.value });
 		}
 	},
 
 	mounted() {
-		this.store.$subscribe((_, state) => {
+		this.$store.$subscribe((_, state) => {
 			if (_.type === MutationType.patchObject && _.payload.queryString)
 				(this.$refs.text as HTMLTextAreaElement).value = state.queryString;
 		});
@@ -32,19 +28,16 @@ export default defineComponent({
 </script>
 
 <template>
-		<div class="controller" @keydown.ctrl.enter="onQueryExecute()">
+	<div class="controller" @keydown.ctrl.enter="onQueryExecute()">
 		<span>Thanh nhập query</span>
 		<div class="input-field">
 			<textarea ref="text" type="text" id="queryBar" @input="(i) => onQueryUpdate(i)">{{ queryString }}</textarea>
-			<button :disabled="!Boolean(store.database)" @click="onQueryExecute()">Chạy query</button>
+			<button :disabled="!$store.ready || $store.status === 4" @click="onQueryExecute()">Chạy query</button>
 		</div>
 	</div>
 </template>
 
 <style scoped>
-
-
-
 #queryBar {
 	border-radius: 6px;
 	padding: 10px;

@@ -43,13 +43,13 @@ export default defineComponent({
 		const blockAccess = () => {
 			this.$q
 				.dialog({
-					dark: this.store.session.inDarkMode,
+					dark: this.store.views.inDarkMode,
 					title: 'Lưu ý',
 					message: 'Bạn không có quyền truy cập nội dung này.',
 					persistent: true,
 					cancel: false,
 					style: {
-						color: this.store.session.inDarkMode ? 'white' : 'black'
+						color: this.store.views.inDarkMode ? 'white' : 'black'
 					},
 					html: true,
 					ok: 'Đăng nhập'
@@ -78,7 +78,7 @@ export default defineComponent({
 
 		if (!authUser || !ALLOWED_USERS.includes(authUser.id)) return blockAccess();
 
-		this.store.session.token = stored;
+		this.store.auth.token = stored;
 		this.authorized = true;
 		localStorage.removeItem('token_string');
 
@@ -92,7 +92,7 @@ export default defineComponent({
 		});
 
 		window.onbeforeunload = () => {
-			localStorage.setItem('token_string', this.store.session.token!);
+			localStorage.setItem('token_string', this.store.auth.token!);
 		};
 	}
 });
@@ -100,7 +100,7 @@ export default defineComponent({
 <template>
 	<div v-if="authorized">
 		<QueryInputVue />
-		<ViewPagination v-if="store.session.data.length > 1"></ViewPagination>
+		<ViewPagination v-if="store.session.maxIndex > 1"></ViewPagination>
 		<TableViewVue />
 		<StatusBar />
 		<CellEditorVue :hidden="true"></CellEditorVue>
