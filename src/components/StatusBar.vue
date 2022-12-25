@@ -4,30 +4,26 @@ import { mapWritableState, MutationType } from 'pinia';
 import { defineComponent } from 'vue';
 import CheckIcon from '@/components/icons/Check.vue';
 import CrossIcon from '@/components/icons/Cross.vue';
-import { extractTables } from '@/utils';
+import BusyIcon from '@/components/icons/Busy.vue';
 
 const mapper = {
 	0: ['grey', 'Unavailable'],
 	1: ['#ff5b5b', 'Error'],
 	2: ['#22bb33', 'Success'],
-	3: ['#ff5b5b', 'Fatal']
+	3: ['#ff5b5b', 'Fatal'],
+	4: ['grey', 'Busy']
 };
 export default defineComponent({
-	setup: () => {
-		const store = useMainStore();
-		return { store };
-	},
 	mounted() {
-		this.store.$subscribe((_) => {
+		this.$store.$subscribe((_) => {
 			if (_.type === MutationType.patchObject) {
 				if (_.payload.status) this.update(_.payload.status);
 			}
 		});
 	},
 	name: 'TableRow',
-	components: { CheckIcon, CrossIcon },
+	components: { CheckIcon, CrossIcon, BusyIcon },
 	methods: {
-		extractTables,
 		update(val: number) {
 			const [color, text] = mapper[val as keyof typeof mapper];
 			const elem = this.$refs.footer as HTMLDivElement;
@@ -37,21 +33,21 @@ export default defineComponent({
 		},
 		switchTable(i: MouseEvent) {
 			if (!(i.target instanceof HTMLSpanElement)) return;
-			if (i.target.id || !i.target.textContent) return;
+			if (i.target.id || !i.target.textContent || this.$store.status === 4) return;
 
-			this.store.$patch({ queryString: `SELECT * FROM ${i.target.textContent} LIMIT 50` });
-			this.store.exec();
+			this.$store.$patch({ queryString: `SELECT * FROM ${i.target.textContent} LIMIT 50` });
+			this.$store.exec();
 		},
 		tableInfo(i: MouseEvent) {
 			if (!(i.target instanceof HTMLSpanElement)) return;
-			if (i.target.id || !i.target.textContent) return;
+			if (i.target.id || !i.target.textContent || this.$store.status === 4) return;
 
-			this.store.$patch({ queryString: `PRAGMA table_info(${i.target.textContent})` });
-			this.store.exec();
+			this.$store.$patch({ queryString: `PRAGMA table_info(${i.target.textContent})` });
+			this.$store.exec();
 		}
 	},
 	computed: {
-		...mapWritableState(useMainStore, ['tables', 'status'])
+		...mapWritableState(useMainStore, ['status'])
 	}
 });
 </script>
@@ -59,12 +55,13 @@ export default defineComponent({
 <template>
 	<div class="footer" ref="footer" @click="switchTable" @contextmenu.prevent="tableInfo">
 		<div class="status">
-			<CheckIcon v-if="status === 2" /><CrossIcon v-else-if="[1, 3].includes(status)" /><span id="status"
-				>Unknown</span
-			>
+			<CheckIcon v-if="status === 2" /><BusyIcon v-else-if="status === 4" /><CrossIcon
+				v-else-if="[1, 3].includes(status)"
+			/>
+			<span id="status">Unknown</span>
 		</div>
 		<div class="table">
-			<span v-for="table in tables" :key="table">{{ table }}</span>
+			<span v-for="[table] in $store.meta.tables" :key="table">{{ table }}</span>
 		</div>
 	</div>
 </template>

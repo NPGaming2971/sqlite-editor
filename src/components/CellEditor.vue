@@ -1,14 +1,13 @@
 <script lang="ts">
-import { isJsonLike } from '@/utils';
+import { isJsonLike, locateCell, locateHead, parseData, tryParseJSONObject } from '@/utils';
 import { defineComponent } from 'vue';
 import { mapWritableState } from 'pinia';
 import { useMainStore } from '@/stores/main';
+import { request } from '@/utils/communicator';
+import { format } from 'quasar';
 
 export default defineComponent({
 	name: 'FieldEditor',
-	setup() {
-		return { store: useMainStore() };
-	},
 	methods: {
 		onClose: function () {
 			const el = this.$refs.editor as HTMLDivElement;
@@ -28,66 +27,68 @@ export default defineComponent({
 			}
 			return true;
 		},
-		onDatabaseUpdate() {
-			if (this.store.session.isJsonCell) {
+		async onDatabaseUpdate() {
+			if (this.$store.session.isJsonCell) {
 				if (!this.isJsonString(this.session.content)) {
 					if (!confirm('JSON không hợp lệ.\nBạn vẫn muốn lưu chứ?')) return;
 				} else this.format(this.session.content, 0);
 			}
 
-			const column = this.retrieveColumn(this.session.location[1]);
-
-			console.log(column)
-			const tableName = this.store.tableName;
+			const tableName = this.$store.tableName;
 			if (!tableName) throw new Error('Unknown table.');
 
-			const table = this.store.table()!.find(
-				//@ts-ignore
-				(i) => i.pk === 1
-			);
+			const tablePrimaryKeyData = this.$store.currentTable?.find((i) => i.pk === 1);
+			if (!tablePrimaryKeyData) throw new Error('Unknown primary key.');
 
-			const determineTarget = Array.from(document.querySelectorAll('table.q-table thead th')).findIndex(
-				//@ts-ignore
-				(i) => i.textContent === table.name && Boolean(console.log(i.textContent) ?? true)
-			);
+			const tablePrimaryKey = tablePrimaryKeyData.name;
 
-			const row = document.querySelector(
-				`table > tbody > tr:nth-child(${this.session.location[0] + 1})`
-			)! as HTMLTableRowElement;
+			const table = document.querySelector('table.q-table') as HTMLTableElement;
+			if (!table) throw new Error('Unknown table.');
+			const targetId = this.$store.session.row[tablePrimaryKey];
+			const currentColumnHeadCell = locateHead(table, this.session.location[1]);
+			// Cell element đã click
+			const cell = locateCell(table, this.$store.session.location);
 
-			console.log(row)
+			if (!currentColumnHeadCell || !cell) return;
 
-			const serialize = (i: any, type: any) => {
-				type = type.toLowerCase();
-				if (type === 'number') return Number(i);
-				return i;
-			};
+			// Tên của cell đã click
+			const columnName = currentColumnHeadCell.childNodes.item(0).textContent!;
 
-			const el = row.children.item(determineTarget);
-			const content = el?.textContent!;
-			const clName = column.childNodes.item(0)!.textContent
+			// Data của column này.
+			const columnData = this.$store.currentTable!.find((i) => i.name === columnName)!;
+			const serialized = this.serialize(this.$store.session.content, columnData.type);
 
-			const serialized = serialize(
-				this.session.content,
-				//@ts-ignore
-				this.store.table().find((i) => i.name === clName).type
-			);
-
-			const r = this.store.exec(
-				`UPDATE ${tableName} SET ${clName} = ${
-					typeof serialized === 'number' ? serialized : `'${serialized}'`
-				} WHERE ${table.name} = '${content}'`,
-				true
-			);
-
-			if (r) {
-				row.children.item(this.session.location[1])!.textContent = String(serialized);
-				this.onClose();
+			await request(`http://wamvn.net:1120/update/${tableName}/${targetId}/`, {
+				method: 'PATCH',
+				body: JSON.stringify({
+					change: parseData({
+						[columnName]: tryParseJSONObject(serialized as any)
+					})
+				})
+			})
+				.then(() => {
+					cell.textContent = String(serialized);
+					this.onClose();
+				})
+				.catch((err) => {
+					console.log(err);
+					this.$store.$patch({ session: { error: err }, status: 1 });
+				});
+		},
+		serialize(i: any, type: string) {
+			switch (type) {
+				case 'INTEGER':
+				case 'REAL':
+					return Number(i);
+				case 'TEXT':
+					return JSON.stringify(i);
+				case 'NULL':
+					return null;
+				case 'BLOB':
+				default:
+					return new TextEncoder().encode(i);
 			}
-		},
-		retrieveColumn(columnLoc: number) {
-			return document.querySelectorAll('div.q-table__middle.scroll > table > thead > tr th').item(columnLoc);
-		},
+		}
 	},
 
 	computed: {
@@ -117,7 +118,6 @@ div.editor-container > div:first-of-type {
 div.editor-container > div:first-of-type > *:not(button:last-of-type) {
 	margin-right: 3px;
 }
-
 
 div.editor-container {
 	position: fixed;

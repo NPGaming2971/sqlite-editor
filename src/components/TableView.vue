@@ -2,16 +2,12 @@
 import { useMainStore } from '@/stores/main';
 import { isJsonLike } from '@/utils';
 import { mapState } from 'pinia';
+import { QInnerLoading } from 'quasar';
 import { defineComponent } from 'vue';
 const SPECIAL_COLUMN_NAME = ['$sqlite_editor_readonly'];
 
 export default defineComponent({
 	name: 'TableView',
-	setup() {
-		const store = useMainStore();
-
-		return { store };
-	},
 	methods: {
 		onCellClick(i: Event, e: any, g: number) {
 			if (!(i.target instanceof HTMLTableCellElement)) return;
@@ -20,9 +16,9 @@ export default defineComponent({
 				this.$q.dialog({
 					title: 'Lưu ý',
 					message: 'Bạn không thể chỉnh sửa bảng này.',
-					dark: this.store.session.inDarkMode,
+					dark: this.$store.views.inDarkMode,
 					style: {
-						color: this.store.session.inDarkMode ? 'white' : 'black'
+						color: this.$store.views.inDarkMode ? 'white' : 'black'
 					}
 				});
 				return;
@@ -31,23 +27,22 @@ export default defineComponent({
 			const el = document.querySelector('.editor-container')! as HTMLDivElement;
 			el.style.height = '100%';
 
-			console.log([g, i.target.cellIndex]);
+			this.session.row = e;
 
-			this.store.$patch({
+			this.$store.$patch({
 				session: {
-					//@ts-ignore
 					location: [g, i.target.cellIndex],
 					content: i.target.textContent!,
-					isJsonCell: isJsonLike(i.target.textContent!)
+					isJsonCell: isJsonLike(i.target.textContent!),
 				}
 			});
 		}
 	},
+	components: { QInnerLoading },
 	computed: {
-		...mapState(useMainStore, ['queryString', 'data']),
+		...mapState(useMainStore, ['queryString', 'session', 'status']),
 		columns() {
-			//@ts-ignore
-			return Object.keys(this.data[0] ?? []);
+			return Object.keys(this.$store.session.data[0] ?? []);
 		},
 		SPECIAL_COLUMN_NAME: () => SPECIAL_COLUMN_NAME
 	}
@@ -56,10 +51,19 @@ export default defineComponent({
 
 <template>
 	<QTable
-		:rows="data"
-		:columns="columns.map((i) => ({ name: i, label: i, field: i, align: 'left', sortable: true }))"
+		:rows="session.data"
+		:columns="
+			columns.map((i) => ({
+				name: i,
+				label: i,
+				field: i,
+				align: 'left',
+				sortable: true
+			}))
+		"
+		:loading="$store.status === 4"
 		:pagination="{ rowsPerPage: 50 }"
-		:dark="store.session.inDarkMode"
+		:dark="$store.views.inDarkMode"
 		:rows-per-page-options="[0]"
 		:visible-columns="columns.filter((i) => !SPECIAL_COLUMN_NAME.includes(i))"
 		@row-click="onCellClick"
@@ -70,6 +74,7 @@ export default defineComponent({
 			</QTd>
 		</template>
 		<template v-slot:no-data>Không có dữ liệu.</template>
+		<template v-slot:loading><QInnerLoading :showing="$store.status === 4" /></template>
 	</QTable>
 </template>
 
