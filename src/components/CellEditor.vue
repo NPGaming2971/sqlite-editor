@@ -58,16 +58,18 @@ export default defineComponent({
 			const columnData = this.$store.currentTable!.find((i) => i.name === columnName)!;
 			const serialized = this.serialize(this.$store.session.content, columnData.type);
 
+			const data = tryParseJSONObject(serialized as any);
+
 			await request(`http://wamvn.net:1120/update/${tableName}/${targetId}/`, {
 				method: 'PATCH',
 				body: JSON.stringify({
 					change: parseData({
-						[columnName]: tryParseJSONObject(serialized as any)
+						[columnName]: data
 					})
 				})
 			})
 				.then(() => {
-					cell.textContent = String(serialized);
+					cell.textContent = data;
 					this.onClose();
 				})
 				.catch((err) => {
